@@ -1,0 +1,38 @@
+{
+  "name": "Down Under Sports Import Helper",
+  "description": "Automate Name finding on select sites",
+  "version": "3.1.0",
+  "permissions" : [
+    "storage",
+    "tabs",
+    "activeTab",
+    "declarativeContent",
+    "https://*.milesplit.com/*",
+    "https://*.trackwrestling.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "http://*.milesplit.com/*",
+        "https://*.milesplit.com/*"
+      ],
+      "css": ["src/inject/css/dus-extension.css"],
+      "js": ["src/vendor/js/dexie.js","src/inject/js/milesplit.js"],
+      "all_frames": false,
+      "run_at": "document_end"
+    },
+    {
+      "matches": [
+        "http://*.trackwrestling.com/*",
+        "https://*.trackwrestling.com/*"
+      ],
+      "css": ["src/inject/css/dus-extension.css"],
+      "js": ["src/inject/js/trackwrestling.js"],
+      "run_at": "document_end"
+    }
+  ],
+  "web_accessible_resources": [
+    "src/fonts/*"
+  ],
+  "manifest_version": 2
+}
