@@ -69,9 +69,10 @@ var domReady = (function() {
   }
 })();
 
-var table, section, stateElement,
+var table, section, stateElement, runTimeout,
 buttonId = 'DUS_IMPORT_BUTTON',
 singleButtonId = 'DUS_IMPORT_BUTTON_SINGLE',
+clearButtonId = 'DUS_CLEAR_ALL_RUNNING',
 colStart = '"', colDelim = '","', rowDelim = '"\r\n',
 dataWrapper,
 headers = ['NameAcquisition', 'FirstName', 'LastName', 'Gender', 'YearGrad', 'Stats', 'State', 'Sport', 'School', 'City'],
@@ -84,11 +85,6 @@ db = new Dexie('MilesplitDB');
 db.version(1).stores({
   schools: 'url'
 });
-
-// chrome.storage.local.get(null, function(stuff){
-//   console.log(stuff);
-//   chrome.storage.local.clear()
-// })
 
 function globalSet(args, cb){
   chrome.storage.local.set(args, function(){
@@ -461,11 +457,40 @@ async function createCsv(){
   });
 }
 
+function clearCurrent(e){
+  if(e.target.id === clearButtonId) {
+    clearTimeout(runTimeout);
+    chrome.storage.local.get(null, function(stuff){
+      console.log(stuff);
+      chrome.storage.local.clear()
+    })
+  }
+}
+
+function addClearButton(){
+  var clearButton = document.createElement('a');
+
+  clearButton.id = clearButtonId;
+  clearButton.innerHTML = 'STOP RUNNING';
+
+  try {
+    document.getElementById('content').prepend(clearButton);
+  } catch(e) {
+    document.body.prepend(clearButton);
+  }
+
+  document.addEventListener('click', clearCurrent);
+}
+
 function run() {
-  setTimeout(function() {
+  addClearButton();
+
+  runTimeout = setTimeout(function() {
     loadData().then(function(){
       start();
     });
   }, 5000)
+
 }
+
 domReady(run);
