@@ -297,7 +297,7 @@ async function parseTable(){
 
   var accuracy = document.getElementById('ddAccuracy');
 
-  if((accuracy.value || '') !== 'all') {
+  if((!!accuracy) && (accuracy.value !== 'all')) {
     accuracy.value = 'all';
     accuracy.dispatchEvent(changeEvent());
     return false
