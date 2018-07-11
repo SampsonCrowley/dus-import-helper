@@ -114,7 +114,7 @@ function start(){
           return parseTable();
         } else {
           var state = document.getElementById('ddState'),
-          level = document.getElementById('ddLevel');
+              level = document.getElementById('ddLevel');
           if (obj.runningMilesplit === 'nextGender'){
             if(level.value === 'high-school-boys'){
               level.value = 'high-school-girls';
@@ -127,8 +127,8 @@ function start(){
                 return level.dispatchEvent(changeEvent());
               })
             }
-            localStorage.setItem('ranWomen', true);
             if(freshStart(state.value)){
+              localStorage.setItem('ranWomen', true);
               startRun();
             }
           } else if (obj.runningMilesplit === 'nextState'){
@@ -193,11 +193,11 @@ function addButton(state){
 
 function freshStart(state){
   var event = document.getElementById('ddEvent'),
-  options = Array.apply(null, event.options)
-  .filter((option) => (!noRun.includes(option.value.toLowerCase()) && option.value !== event.value))
-  .map((option) => option.value),
-  seasonVal = document.getElementById('ddSeason').value,
-  levelVal = document.getElementById('ddLevel').value
+      options = Array.apply(null, event.options)
+        .filter((option) => (!noRun.includes(option.value.toLowerCase()) && option.value !== event.value))
+        .map((option) => option.value),
+      seasonVal = document.getElementById('ddSeason').value,
+      levelVal = document.getElementById('ddLevel').value;
 
   setGrades();
   localStorage.setItem('events', JSON.stringify(options));
@@ -294,6 +294,14 @@ function startRun(){
 
 async function parseTable(){
   if(!currentGrade || !table || !gradeOptions.includes(document.getElementById('ddGrade').value.toLowerCase())) return yearEventOrCities();
+
+  var accuracy = document.getElementById('ddAccuracy');
+
+  if((accuracy.value || '') !== 'all') {
+    accuracy.value = 'all';
+    accuracy.dispatchEvent(changeEvent());
+    return false
+  }
 
   var row,
   tbody = table.getElementsByTagName('tbody')[0],
