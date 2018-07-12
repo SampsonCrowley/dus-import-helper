@@ -70,6 +70,7 @@ var domReady = (function() {
 })();
 
 var table, section, stateElement, runTimeout,
+storageKeys = ['currentGrade', 'events', 'fileName', 'gradeOptions', 'ranWomen', 'runningCities', 'currentCity'],
 buttonId = 'DUS_IMPORT_BUTTON',
 singleButtonId = 'DUS_IMPORT_BUTTON_SINGLE',
 clearButtonId = 'DUS_CLEAR_ALL_RUNNING',
@@ -87,6 +88,18 @@ db.version(1).stores({
   schools: 'url'
 });
 
+function deleteLocalKeys(){
+  for(var i = 0; i < storageKeys.length; i++) localStorage.removeItem(storageKeys[idx]);
+}
+
+function deleteAllData(){
+  deleteLocalKeys();
+  chrome.storage.local.get(null, function(stuff){
+    console.log(stuff);
+    chrome.storage.local.clear()
+  })
+}
+
 function globalSet(args, cb){
   chrome.storage.local.set(args, function(){
     if(checkError()){
@@ -95,8 +108,11 @@ function globalSet(args, cb){
   })
 }
 
-function changeEvent(){
-  return new Event('change', { 'bubbles': true })
+function changeEvent(elem, value){
+  elem.value = value;
+  return setTimeout(function(){
+    elem.dispatchEvent(new Event('change', { 'bubbles': true }))
+  }, 1000)
 }
 
 function start(){
@@ -113,15 +129,14 @@ function start(){
           var state = document.getElementById('ddState'),
               level = document.getElementById('ddLevel');
           if (obj.runningMilesplit === 'nextGender'){
-            if(level.value === 'high-school-boys'){
-              level.value = 'high-school-girls';
-              return level.dispatchEvent(changeEvent());
+            if(level.value !== 'high-school-girls'){
+              localStorage.removeItem('ranWomen');
+              return changeEvent(level, 'high-school-girls');
             } else if(localStorage.getItem('ranWomen')){
               return globalSet({runningMilesplit: 'nextState'}, function(){
                 console.log('completed women');
                 localStorage.removeItem('ranWomen');
-                level.value = 'high-school-boys';
-                return level.dispatchEvent(changeEvent());
+                return changeEvent(level, 'high-school-boys');
               })
             }
             if(freshStart(state.value)){
@@ -129,9 +144,9 @@ function start(){
               startRun();
             }
           } else if (obj.runningMilesplit === 'nextState'){
-            if(level.value === 'high-school-girls'){
-              level.value = 'high-school-boys';
-              return level.dispatchEvent(changeEvent());
+            deleteLocalKeys();
+            if(level.value !== 'high-school-boys'){
+              return changeEvent(level, 'high-school-boys');
             }
             return chrome.storage.local.get({states: [], currentState: false},function(obj){
               if(checkError()){
@@ -140,11 +155,10 @@ function start(){
                   if(obj.states.length > 0){
                     let currentState = obj.states.shift();
                     return globalSet({currentState: currentState, states: obj.states}, function(){
-                      state.value = currentState;
-                      state.dispatchEvent(changeEvent());
+                      return changeEvent(state, currentState);
                     })
                   } else {
-                    return chrome.storage.local.clear()
+                    return deleteAllData();
                   }
                 } else {
                   if(freshStart(obj.currentState)){
@@ -195,12 +209,17 @@ function toggleStatesList(direction){
 
 function addElementsToDOM(state){
   var checkbox, label, span, toggleTimeout,
+      level = document.getElementById('ddLevel'),
       checkAllButton = document.createElement('button'),
       checkNoneButton = document.createElement('button'),
       newButton = document.createElement('a'),
       single = document.createElement('a'),
       stateListWrapper = document.createElement('div'),
       statesList = getStatesList();
+
+  if(level && level.value !== 'high-school-boys') {
+    return changeEvent(level, 'high-school-boys');
+  }
 
   stateListWrapper.id = stateListWrapperId;
   stateListWrapper.innerHTML = '<br/>';
@@ -273,8 +292,7 @@ function freshStart(state){
   localStorage.setItem('fileName', state + '_' + levelVal + '_' + seasonVal);
 
   if(noRun.includes(event.value.toLowerCase())){
-    event.value = options.shift();
-    event.dispatchEvent(changeEvent());
+    changeEvent(event, options.shift());
     return false
   }
 
@@ -386,8 +404,7 @@ async function parseTable(){
   var accuracy = document.getElementById('ddAccuracy');
 
   if((!!accuracy) && (accuracy.value !== 'all')) {
-    accuracy.value = 'all';
-    accuracy.dispatchEvent(changeEvent());
+    changeEvent(accuracy, 'all');
     return false
   }
 
@@ -453,14 +470,13 @@ function yearEventOrCities(){
     var grade = grades.shift(), gradeHolder = document.getElementById('ddGrade');
     localStorage.setItem('gradeOptions', JSON.stringify(grades));
     localStorage.setItem('currentGrade', grade);
-    gradeHolder.value = grade;
-    gradeHolder.dispatchEvent(changeEvent());
+    changeEvent(gradeHolder, grade);
   } else if(events.length > 0){
     setGrades(document.getElementById('ddGrade').value.toLowerCase());
-    var event = events.shift(), eventHolder = document.getElementById('ddEvent');
+    var ev = events.shift(), eventHolder = document.getElementById('ddEvent');
     localStorage.setItem('events', JSON.stringify(events));
-    eventHolder.value = event;
-    eventHolder.dispatchEvent(changeEvent());
+    eventHolder.value = ev;
+    changeEvent(eventHolder, ev);
   } else {
     localStorage.setItem('runningCities', 'true')
     getCities();
@@ -470,16 +486,28 @@ function yearEventOrCities(){
 async function getCities(){
   var currentCity = localStorage.getItem('currentCity');
   if(currentCity){
-    var spans = document.querySelector('header.profile .teamInfo').querySelectorAll('span');
-    for(var s = 0; s < spans.length; s++){
-      var span = spans[s]
-      if(span.innerHTML.toLowerCase().indexOf('usa') !== -1){
-        var city = span.innerHTML.split(',')[0].trim()
-        dataWrapper[currentCity]['visited'] = true;
-        dataWrapper[currentCity]['city'] = city;
-        await saveData();
-        break;
+    var foundCity = false,
+        cityHeader = document.querySelector('header.profile .teamInfo');
+
+    if(cityHeader) {
+      var spans = cityHeader.querySelectorAll('span');
+      for(var s = 0; s < spans.length; s++){
+        var span = spans[s]
+        if(span.innerHTML.toLowerCase().indexOf('usa') !== -1){
+          var city = span.innerHTML.split(',')[0].trim()
+          foundCity = true;
+          dataWrapper[currentCity]['visited'] = true;
+          dataWrapper[currentCity]['city'] = city;
+          await saveData();
+          break;
+        }
       }
+    }
+
+    if(!foundCity){
+      dataWrapper[currentCity]['visited'] = true;
+      dataWrapper[currentCity]['city'] = 'unknown';
+      await saveData();
     }
   }
   for (var school in dataWrapper){
@@ -552,10 +580,8 @@ async function createCsv(){
 function clearCurrent(e){
   if(e.target.id === clearButtonId) {
     clearTimeout(runTimeout);
-    chrome.storage.local.get(null, function(stuff){
-      console.log(stuff);
-      chrome.storage.local.clear()
-    })
+
+    deleteAllData();
   }
 }
 
