@@ -73,6 +73,7 @@ var table, section, stateElement, runTimeout,
 buttonId = 'DUS_IMPORT_BUTTON',
 singleButtonId = 'DUS_IMPORT_BUTTON_SINGLE',
 clearButtonId = 'DUS_CLEAR_ALL_RUNNING',
+stateListWrapperId = 'DUS_STATES_CHECKBOXES',
 colStart = '"', colDelim = '","', rowDelim = '"\r\n',
 dataWrapper,
 headers = ['NameAcquisition', 'FirstName', 'LastName', 'Gender', 'YearGrad', 'Stats', 'State', 'Sport', 'School', 'City'],
@@ -156,7 +157,7 @@ function start(){
           } else {
             if(freshStart(state.value)){
               stateElement = state;
-              addButton();
+              addElementsToDOM();
             };
           }
 
@@ -166,9 +167,79 @@ function start(){
   }
 }
 
-function addButton(state){
-  var newButton = document.createElement('a'),
-      single = document.createElement('a');
+function getStateElement(){
+  return stateElement = stateElement || document.getElementById('ddState');
+}
+
+
+function getStatesList(){
+  stateElement = getStateElement();
+
+  return (!stateElement) ? [] : Array.apply(null, stateElement.options).filter((option) => (!noRun.includes(option.value.toLowerCase()))).map((option) => option.value)
+}
+
+function toggleStatesList(direction){
+  console.log('toggle states list: ', direction);
+
+  var inputs, wrapper = document.getElementById('DUS_STATES_CHECKBOXES');
+
+  if(wrapper) {
+    inputs = Array.apply(null, wrapper.querySelectorAll('input[name=DUS_STATE_CHECKBOX]'));
+    for(var i = 0; i < inputs.length; i++){
+      inputs[i].checked = !!direction;
+    }
+  }
+
+  return !!direction;
+}
+
+function addElementsToDOM(state){
+  var checkbox, label, span, toggleTimeout,
+      checkAllButton = document.createElement('button'),
+      checkNoneButton = document.createElement('button'),
+      newButton = document.createElement('a'),
+      single = document.createElement('a'),
+      stateListWrapper = document.createElement('div'),
+      statesList = getStatesList();
+
+  stateListWrapper.id = stateListWrapperId;
+  stateListWrapper.innerHTML = '<br/>';
+
+  checkAllButton.innerText = 'Check All';
+  checkNoneButton.innerText = 'Check None';
+
+  stateListWrapper.prepend(checkAllButton);
+  stateListWrapper.prepend(checkNoneButton);
+
+  checkAllButton.addEventListener('click', function(){
+    clearTimeout(toggleTimeout);
+    toggleTimeout = setTimeout(() => {toggleStatesList(true)}, 1000);
+  })
+
+  checkNoneButton.addEventListener('click', function(){
+    clearTimeout(toggleTimeout);
+    toggleTimeout = setTimeout(() => {toggleStatesList(false)}, 1000);
+  })
+
+  for(var i = 0; i < statesList.length; i++){
+    checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.name = 'DUS_STATE_CHECKBOX';
+    checkbox.value = statesList[i];
+    checkbox.checked = false;
+
+    label = document.createElement('label');
+    label.innerText = statesList[i];
+    label.prepend(checkbox);
+
+    stateListWrapper.appendChild(label);
+
+    if(i < (statesList.length - 1)) {
+      span = document.createElement('span');
+      span.innerHTML = '&nbsp;|&nbsp;'
+      stateListWrapper.appendChild(span);
+    }
+  }
 
   newButton.id = buttonId;
   newButton.innerHTML = 'Download Table';
@@ -177,9 +248,11 @@ function addButton(state){
   single.innerHTML = 'Download Table (THIS STATE ONLY)';
   // single.setAttribute('data-state', state);
   if(table) {
+    table.parentElement.prepend(stateListWrapper);
     table.parentElement.prepend(newButton);
     table.parentElement.prepend(single);
   } else{
+    section.appendChild(stateListWrapper);
     section.appendChild(newButton);
     section.appendChild(single);
   }
@@ -262,14 +335,33 @@ async function saveData(clear = false){
   })
 }
 
+function getCheckedStates(){
+  var inputs, selected = [], wrapper = document.getElementById('DUS_STATES_CHECKBOXES');
+
+  if(wrapper) {
+    inputs = Array.apply(null, wrapper.querySelectorAll('input[name=DUS_STATE_CHECKBOX]'));
+    for(var i = 0; i < inputs.length; i++){
+      if(inputs[i].checked) selected.push(inputs[i].value);
+    }
+  }
+
+  return selected;
+}
+
 function downloadTable(e){
+  stateElement = getStateElement();
   if(table && (e.target.id === buttonId) || e.target.id === singleButtonId){
+    var checkedStates = Array.apply(null, getCheckedStates())
     e.preventDefault();
     e.stopPropagation();
     globalSet({
-      states: (e.target.id === singleButtonId || !stateElement) ? [] : Array.apply(null, stateElement.options).filter((option) => (!noRun.includes(option.value.toLowerCase()) && option.value !== stateElement.value)).map((option) => option.value)
+      states: (e.target.id === singleButtonId) ? [] : checkedStates.filter((val) => ((!stateElement) || (val !== stateElement.value)))
     }, function(){
-      startRun();
+      if(stateElement && checkedStates.includes(stateElement.value)){
+        startRun();
+      } else {
+        startRun(true)
+      }
     })
   }
 }
@@ -282,9 +374,9 @@ function checkError(){
   return true;
 }
 
-function startRun(){
+function startRun(wrongState){
   saveData(true).then(function(){
-    return globalSet({runningMilesplit: 'true', startingPoint: window.location.href, currentState: false}, parseTable);
+    return globalSet({runningMilesplit: (!!wrongState ? 'nextState' : 'true'), startingPoint: window.location.href, currentState: false}, parseTable);
   })
 }
 
@@ -305,7 +397,7 @@ async function parseTable(){
   event = document.getElementById('ddEvent').value.toUpperCase(),
   level = document.getElementById('ddLevel').value.toUpperCase().split('-'),
   sport = document.getElementById('ddSeason').value === 'cross-country' ? 'XC' : 'TF',
-  stateVal = document.getElementById('ddState').value,
+  stateVal = getStateElement().value,
   state = (stateVal === 'usa' ? function(row){ return trimValue(row.querySelector('td.name .team .state')) } : function() { return stateVal }),
   gender = level.includes('BOYS') || level.includes('MEN') ? 'M' : 'F'
 

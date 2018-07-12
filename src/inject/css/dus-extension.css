@@ -228,3 +228,7 @@
   z-index: auto;
   zoom: 1;
 }
+
+#DUS_CLEAR_ALL_RUNNING {
+  background-color: rgb(255, 104, 104);
+}
