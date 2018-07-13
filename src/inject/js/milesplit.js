@@ -162,7 +162,7 @@ function start(){
                 if(!!res) startRun(false, 'F');
               });
             }
-          } else if (obj.runningMilesplit === 'nextState'){
+          } else if (obj.runningMilesplit === 'nextState') {
             deleteLocalKeys();
             if(level.value !== 'high-school-boys'){
               return changeEvent(level, 'high-school-boys');
@@ -475,7 +475,8 @@ function checkError(){
 
 function startRun(wrongState, gender){
   saveData(true).then(function(){
-    return globalSet({runningMilesplit: (!!wrongState ? 'nextState' : 'true'), startingPoint: window.location.href, currentState: false, gender: !!gender ? gender : 'M'}, parseTable);
+    var eventEl = document.getElementById('ddEvent')
+    return globalSet({runningMilesplit: (!!wrongState ? 'nextState' : 'true'), startingPoint: window.location.href, currentState: false, gender: !!gender ? gender : 'M', lastEvent: (eventEl ? eventEl.value : null)}, parseTable);
   })
 }
 
