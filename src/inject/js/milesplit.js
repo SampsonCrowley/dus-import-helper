@@ -114,7 +114,7 @@ function changeEvent(el, value){
 }
 
 function start(){
-  chrome.storage.local.get({runningMilesplit: false, gender: 'M', states: [], currentState: false}, function(obj){
+  chrome.storage.local.get({runningMilesplit: false, gender: 'M', states: [], currentState: false, events: [], grades: []}, function(obj){
     if(obj.runningMilesplit === 'runningCities'){
       return getCities();
     } else {
@@ -133,6 +133,10 @@ function start(){
                 return changeEvent(level, 'high-school-boys');
               })
             } else {
+              if((level.value.toUpperCase().split('-').includes('BOYS') || level.includes('MEN'))){
+                changeEvent(level, 'high-school-girls');
+                return false
+              }
               freshStart(state.value, function(res) {
                 if(!!res) startRun(false, 'F');
               });
@@ -166,6 +170,8 @@ function start(){
             });
           }
         }
+      } else if(obj.runningMilesplit === 'true'){
+        console.log(obj)
       }
     }
   })
