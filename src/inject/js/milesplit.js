@@ -92,7 +92,7 @@ function deleteLocalKeys(){
 
 function deleteAllData(){
   deleteLocalKeys();
-  chrome.storage.local.get(null, function(stuff){
+  globalGet(null, function(stuff){
     console.log(stuff);
     chrome.storage.local.clear()
   })
@@ -106,6 +106,10 @@ function globalSet(args, cb){
   })
 }
 
+function globalGet(args, cb) {
+  return chrome.storage.local.get(args || null, cb || function(currentValues){console.log(currentValues)})
+}
+
 function changeEvent(el, value){
   el.value = value;
   return setTimeout(function(){
@@ -114,7 +118,7 @@ function changeEvent(el, value){
 }
 
 function start(){
-  chrome.storage.local.get({runningMilesplit: false, gender: 'M', states: [], currentState: false, events: [], grades: []}, function(obj){
+  globalGet({runningMilesplit: false, gender: 'M', states: [], currentState: false, events: [], grades: [], currentEvent: null, lastEvent: null}, function(obj){
     if(obj.runningMilesplit === 'runningCities'){
       return getCities();
     } else {
@@ -126,7 +130,23 @@ function start(){
         } else {
           var state = document.getElementById('ddState'),
               level = document.getElementById('ddLevel');
-          if (obj.runningMilesplit === 'nextGender'){
+          if(obj.runningMilesplit === 'nextEvent') {
+            var ev = ((!!obj.currentEvent) ? obj.currentEvent : obj.events.shift()),
+                eventHolder = document.getElementById('ddEvent');
+
+            console.log((!!obj.currentEvent), ev, eventHolder.value);
+
+            if(eventHolder.value !== ev) {
+              console.log(ev, eventHolder.value)
+              return globalSet({events: Array.apply(null, obj.events), currentEvent: ev, lastEvent: eventHolder.value}, function() {
+                eventHolder.value = ev;
+                changeEvent(eventHolder, ev);
+              })
+            }
+
+            return globalSet({grades: Array.apply(null, gradeOptions), runningMilesplit: 'true', currentEvent: null, lastEvent: eventHolder.value}, yearEventOrCities);
+
+          } else if(obj.runningMilesplit === 'nextGender') {
             if(obj.gender === 'F'){
               return globalSet({runningMilesplit: 'nextState', gender: 'M'}, function(){
                 console.log('completed women');
@@ -165,13 +185,28 @@ function start(){
             }
           } else {
             freshStart(state.value, function(res) {
-              stateElement = state;
-              addElementsToDOM();
+              if(!!res) {
+                stateElement = state;
+                addElementsToDOM();
+              }
             });
           }
         }
       } else if(obj.runningMilesplit === 'true'){
         console.log(obj)
+        globalGet()
+        const allHeaders = Array.apply(null, document.querySelectorAll('h1'))
+        for(let h = 0; h < allHeaders.length; h++){
+          if(/not found/.test(allHeaders[h].innerText.toLowerCase())) {
+            runTimeout = setTimeout(function(){
+              globalSet({runningMilesplit: 'nextEvent', currentEvent: obj.lastEvent}, function(){
+                var url = window.location.href.split('?');
+
+                window.location.href = url[0].replace(/(.*\/)(.*)/, '$1') + '?' + (url[1] || '')
+              })
+            }, 5000)
+          }
+        }
       }
     }
   })
@@ -278,24 +313,26 @@ function addElementsToDOM(state){
 function freshStart(state, cb = null){
   cb = cb || (res => res);
 
-  var event = document.getElementById('ddEvent'),
-      options = Array.apply(null, event.options)
-        .filter((option) => (!!option.value && !noRun.includes(option.value.toLowerCase()) && option.value !== event.value))
+  var eventEl = document.getElementById('ddEvent'),
+      gradeEl = document.getElementById('ddGrade'),
+      options = Array.apply(null, eventEl.options)
+        .filter((option) => (!!option.value && !noRun.includes(option.value.toLowerCase()) && option.value !== eventEl.value))
         .map((option) => option.value),
       seasonVal = document.getElementById('ddSeason').value,
       levelVal = document.getElementById('ddLevel').value;
 
   deleteLocalKeys();
-  return setGrades(function(){
-    return globalSet({events: options, fileName: state + '_' + levelVal + '_' + seasonVal}, function() {
-      if(noRun.includes(event.value.toLowerCase())){
-        changeEvent(event, options.shift());
-        return cb(false)
-      }
+  return globalSet({events: options, grades: Array.apply(null, gradeOptions), fileName: state + '_' + levelVal + '_' + seasonVal}, function() {
+    if(!!gradeEl.value){
+      changeEvent(gradeEl, '');
+      return cb(false)
+    } else if(noRun.includes(eventEl.value.toLowerCase())){
+      changeEvent(eventEl, options.shift());
+      return cb(false)
+    }
 
-      return cb(true);
-    })
-  });
+    return cb(true);
+  })
 }
 
 function trimValue(el){
@@ -313,6 +350,7 @@ function copyTextToClipboard(text) {
 }
 
 function loadData() {
+  console.log(chrome.storage.local)
   return openDB().then(function(){
     return db.schools.toArray().then(function(schools){
       console.log(schools);
@@ -448,7 +486,7 @@ function parseTable(){
     return false
   }
 
-  return chrome.storage.local.get({runningMilesplit: false, gender: 'M', states: [], currentState: false}, async function(obj){
+  return globalGet({gender: 'M'}, async function(obj){
 
     var row,
     tbody = table.getElementsByTagName('tbody')[0],
@@ -511,30 +549,46 @@ function parseTable(){
   })
 }
 
-function setGrades(cb = null, existing = false) {
-  var options = existing ? gradeOptions.filter((option) => option !== existing) : gradeOptions
-  globalSet({grades: Array.apply(null, options)}, cb || function(){})
+function setGrades(cb = null) {
+  globalSet({grades: Array.apply(null, gradeOptions)}, cb || function(){})
+}
+
+function containsValue(el, val) {
+  for(var i = 0; i < el.length; i++){
+    if(el.options[i].value === val) return true;
+  }
+  return false;
+}
+
+function shiftGrade(grades) {
+  var grade = grades.shift(),
+      gradeHolder = document.getElementById('ddGrade'),
+      stillGrades = grades.length,
+      hasVal = false;
+
+  while(!(hasVal = containsValue(gradeHolder, grade)) && stillGrades) {
+    console.log(grade = grades.shift());
+    stillGrades = grades.length;
+  }
+
+  if(!hasVal) return 'noGrades';
+
+  globalSet({grades: Array.apply(null, grades)}, () => {
+    localStorage.setItem('currentGrade', grade);
+    currentGrade = grade;
+    changeEvent(gradeHolder, grade);
+  })
 }
 
 function yearEventOrCities(){
-  chrome.storage.local.get({grades: [], events: []}, function(obj) {
-    if(obj.grades.length > 0){
-      var grade = obj.grades.shift(),
-          gradeHolder = document.getElementById('ddGrade');
-      globalSet({grades: Array.apply(null, obj.grades)}, () => {
-        localStorage.setItem('currentGrade', grade);
-        currentGrade = grade;
-        changeEvent(gradeHolder, grade);
-      })
+  globalGet({grades: [], events: []}, function(obj) {
+    if((obj.grades.length > 0) && (shiftGrade(obj.grades) !== 'noGrades')){
+      console.log('switching grades')
     } else if(obj.events.length > 0){
-      setGrades(function() {
-        var ev = obj.events.shift(),
-            eventHolder = document.getElementById('ddEvent');
-        globalSet({events: Array.apply(null, obj.events)}, function() {
-          eventHolder.value = ev;
-          changeEvent(eventHolder, ev);
-        })
-      }, document.getElementById('ddGrade').value.toLowerCase());
+      globalSet({runningMilesplit: 'nextEvent'}, function(){
+        gradeHolder = document.getElementById('ddGrade');
+        changeEvent(gradeHolder, '');
+      })
     } else {
       localStorage.removeItem('currentCity');
       globalSet({runningMilesplit: 'runningCities'}, getCities)
@@ -600,7 +654,7 @@ function createCsv(){
     return colNum === lastCol ? rowDelim : colDelim
   }
 
-  chrome.storage.local.get({fileName: new Date().getTime()}, function(obj){
+  globalGet({fileName: new Date().getTime()}, function(obj){
     try {
       for(let h = 0; h < headers.length; h++){
         csv += headers[h] + rowOrCol(h);
@@ -643,7 +697,7 @@ function createCsv(){
 
         globalSet({runningMilesplit: 'nextGender'}, function(){
           deleteLocalKeys();
-          chrome.storage.local.get('startingPoint',function(obj){
+          globalGet('startingPoint',function(obj){
             if(checkError()) {
               window.location.href = obj.startingPoint;
             }
@@ -657,8 +711,16 @@ function createCsv(){
 function clearCurrent(e){
   if(e.target.id === clearButtonId) {
     clearTimeout(runTimeout);
-
-    deleteAllData();
+    if(window.confirm('Clear Data?')){
+      deleteAllData();
+    } else {
+      globalGet(null, function(stuff){
+        console.log(stuff);
+        console.log('currentCity: ', localStorage.getItem('currentCity'));
+        console.log('currentGrade: ', localStorage.getItem('currentGrade'));
+        alert('all values logged to console, refresh page to continue')
+      })
+    }
   }
 }
 
