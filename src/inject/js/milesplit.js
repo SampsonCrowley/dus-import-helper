@@ -153,7 +153,8 @@ function start(){
                 return changeEvent(level, 'high-school-boys');
               })
             } else {
-              if((level.value.toUpperCase().split('-').includes('BOYS') || level.includes('MEN'))){
+              var levelVal = level.value.toUpperCase().split('-')
+              if(levelVal.includes('BOYS') || levelVal.includes('MEN')){
                 changeEvent(level, 'high-school-girls');
                 return false
               }
@@ -192,19 +193,21 @@ function start(){
             });
           }
         }
-      } else if(obj.runningMilesplit === 'true'){
+      } else {
         console.log(obj)
         globalGet()
-        const allHeaders = Array.apply(null, document.querySelectorAll('h1'))
-        for(let h = 0; h < allHeaders.length; h++){
-          if(/not found/.test(allHeaders[h].innerText.toLowerCase())) {
-            runTimeout = setTimeout(function(){
-              globalSet({runningMilesplit: 'nextEvent', currentEvent: obj.lastEvent}, function(){
-                var url = window.location.href.split('?');
+        if(obj.runningMilesplit === 'true') {
+          const allHeaders = Array.apply(null, document.querySelectorAll('h1'))
+          for(let h = 0; h < allHeaders.length; h++){
+            if(/not found/.test(allHeaders[h].innerText.toLowerCase())) {
+              runTimeout = setTimeout(function(){
+                globalSet({runningMilesplit: 'nextEvent', currentEvent: obj.lastEvent}, function(){
+                  var url = window.location.href.split('?');
 
-                window.location.href = url[0].replace(/(.*\/)(.*)/, '$1') + '?' + (url[1] || '')
-              })
-            }, 5000)
+                  window.location.href = url[0].replace(/(.*\/)(.*)/, '$1') + '?' + (url[1] || '')
+                })
+              }, 5000)
+            }
           }
         }
       }
