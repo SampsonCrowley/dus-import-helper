@@ -85,22 +85,22 @@ db.version(1).stores({
   schools: 'url'
 });
 
-function deleteLocalKeys(){
+function deleteLocalKeys() {
   var i, storageKeys = ['currentGrade', 'currentCity'];
   for(i = 0; i < storageKeys.length; i++) localStorage.removeItem(storageKeys[i]);
 }
 
-function deleteAllData(){
+function deleteAllData() {
   deleteLocalKeys();
-  globalGet(null, function(stuff){
+  globalGet(null, function(stuff) {
     console.log(stuff);
     chrome.storage.local.clear()
   })
 }
 
-function globalSet(args, cb){
-  chrome.storage.local.set(args, function(){
-    if(checkError()){
+function globalSet(args, cb) {
+  chrome.storage.local.set(args, function() {
+    if(checkError()) {
       cb()
     }
   })
@@ -110,22 +110,22 @@ function globalGet(args, cb) {
   return chrome.storage.local.get(args || null, cb || function(currentValues){console.log(currentValues)})
 }
 
-function changeEvent(el, value){
+function changeEvent(el, value) {
   el.value = value;
-  return setTimeout(function(){
+  return setTimeout(function() {
     el.dispatchEvent(new Event('change', { 'bubbles': true }))
   }, 1000)
 }
 
-function start(){
-  globalGet({runningMilesplit: false, gender: 'M', states: [], currentState: false, events: [], grades: [], currentEvent: null, lastEvent: null}, function(obj){
-    if(obj.runningMilesplit === 'runningCities'){
+function start() {
+  globalGet({runningMilesplit: false, gender: 'M', states: [], currentState: false, events: [], grades: [], currentEvent: null, lastEvent: null}, function(obj) {
+    if(obj.runningMilesplit === 'runningCities') {
       return getCities();
     } else {
       section = document.getElementById('eventRankings') || document.getElementById('rankingsLeaders');
-      if(section){
+      if(section) {
         table = section.querySelector('table');
-        if(obj.runningMilesplit === 'true'){
+        if(obj.runningMilesplit === 'true') {
           return parseTable();
         } else {
           var state = document.getElementById('ddState'),
@@ -147,14 +147,14 @@ function start(){
             return globalSet({grades: Array.apply(null, gradeOptions), runningMilesplit: 'true', currentEvent: null, lastEvent: eventHolder.value}, yearEventOrCities);
 
           } else if(obj.runningMilesplit === 'nextGender') {
-            if(obj.gender === 'F'){
-              return globalSet({runningMilesplit: 'nextState', gender: 'M'}, function(){
+            if(obj.gender === 'F') {
+              return globalSet({runningMilesplit: 'nextState', gender: 'M'}, function() {
                 console.log('completed women');
                 return changeEvent(level, 'high-school-boys');
               })
             } else {
               var levelVal = level.value.toUpperCase().split('-')
-              if(levelVal.includes('BOYS') || levelVal.includes('MEN')){
+              if(levelVal.includes('BOYS') || levelVal.includes('MEN')) {
                 changeEvent(level, 'high-school-girls');
                 return false
               }
@@ -164,15 +164,15 @@ function start(){
             }
           } else if (obj.runningMilesplit === 'nextState') {
             deleteLocalKeys();
-            if(level.value !== 'high-school-boys'){
+            if(level.value !== 'high-school-boys') {
               return changeEvent(level, 'high-school-boys');
             }
-            if(checkError()){
+            if(checkError()) {
               console.log(obj.states)
-              if(obj.currentState !== state.value){
-                if(obj.states.length > 0){
+              if(obj.currentState !== state.value) {
+                if(obj.states.length > 0) {
                   let currentState = obj.states.shift();
-                  return globalSet({currentState: currentState, states: obj.states}, function(){
+                  return globalSet({currentState: currentState, states: obj.states}, function() {
                     return changeEvent(state, currentState);
                   })
                 } else {
@@ -198,10 +198,10 @@ function start(){
         globalGet()
         if(obj.runningMilesplit === 'true') {
           const allHeaders = Array.apply(null, document.querySelectorAll('h1'))
-          for(let h = 0; h < allHeaders.length; h++){
+          for(let h = 0; h < allHeaders.length; h++) {
             if(/not found/.test(allHeaders[h].innerText.toLowerCase())) {
-              runTimeout = setTimeout(function(){
-                globalSet({runningMilesplit: 'nextEvent', currentEvent: obj.lastEvent}, function(){
+              runTimeout = setTimeout(function() {
+                globalSet({runningMilesplit: 'nextEvent', currentEvent: obj.lastEvent}, function() {
                   var url = window.location.href.split('?');
 
                   window.location.href = url[0].replace(/(.*\/)(.*)/, '$1') + '?' + (url[1] || '')
@@ -215,25 +215,25 @@ function start(){
   })
 }
 
-function getStateElement(){
+function getStateElement() {
   return stateElement = stateElement || document.getElementById('ddState');
 }
 
 
-function getStatesList(){
+function getStatesList() {
   stateElement = getStateElement();
 
   return (!stateElement) ? [] : Array.apply(null, stateElement.options).filter((option) => (!noRun.includes(option.value.toLowerCase()))).map((option) => option.value)
 }
 
-function toggleStatesList(direction){
+function toggleStatesList(direction) {
   console.log('toggle states list: ', direction);
 
   var inputs, wrapper = document.getElementById('DUS_STATES_CHECKBOXES');
 
   if(wrapper) {
     inputs = Array.apply(null, wrapper.querySelectorAll('input[name=DUS_STATE_CHECKBOX]'));
-    for(var i = 0; i < inputs.length; i++){
+    for(var i = 0; i < inputs.length; i++) {
       inputs[i].checked = !!direction;
     }
   }
@@ -241,7 +241,7 @@ function toggleStatesList(direction){
   return !!direction;
 }
 
-function addElementsToDOM(state){
+function addElementsToDOM(state) {
   var checkbox, label, span, toggleTimeout,
       level = document.getElementById('ddLevel'),
       checkAllButton = document.createElement('button'),
@@ -264,17 +264,17 @@ function addElementsToDOM(state){
   stateListWrapper.prepend(checkAllButton);
   stateListWrapper.prepend(checkNoneButton);
 
-  checkAllButton.addEventListener('click', function(){
+  checkAllButton.addEventListener('click', function() {
     clearTimeout(toggleTimeout);
     toggleTimeout = setTimeout(() => {toggleStatesList(true)}, 1000);
   })
 
-  checkNoneButton.addEventListener('click', function(){
+  checkNoneButton.addEventListener('click', function() {
     clearTimeout(toggleTimeout);
     toggleTimeout = setTimeout(() => {toggleStatesList(false)}, 1000);
   })
 
-  for(var i = 0; i < statesList.length; i++){
+  for(var i = 0; i < statesList.length; i++) {
     checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
     checkbox.name = 'DUS_STATE_CHECKBOX';
@@ -313,7 +313,7 @@ function addElementsToDOM(state){
   document.addEventListener('click', downloadTable);
 }
 
-function freshStart(state, cb = null){
+function freshStart(state, cb = null) {
   cb = cb || (res => res);
 
   var eventEl = document.getElementById('ddEvent'),
@@ -326,10 +326,10 @@ function freshStart(state, cb = null){
 
   deleteLocalKeys();
   return globalSet({events: options, grades: Array.apply(null, gradeOptions), fileName: state + '_' + levelVal + '_' + seasonVal}, function() {
-    if(!!gradeEl.value){
+    if(!!gradeEl.value) {
       changeEvent(gradeEl, '');
       return cb(false)
-    } else if(noRun.includes(eventEl.value.toLowerCase())){
+    } else if(noRun.includes(eventEl.value.toLowerCase())) {
       changeEvent(eventEl, options.shift());
       return cb(false)
     }
@@ -338,7 +338,7 @@ function freshStart(state, cb = null){
   })
 }
 
-function trimValue(el){
+function trimValue(el) {
   return el.innerHTML.trim();
 }
 
@@ -354,11 +354,11 @@ function copyTextToClipboard(text) {
 
 function loadData() {
   console.log(chrome.storage.local)
-  return openDB().then(function(){
-    return db.schools.toArray().then(function(schools){
+  return openDB().then(function() {
+    return db.schools.toArray().then(function(schools) {
       console.log(schools);
       dataWrapper = {};
-      for(var i = 0; i < schools.length; i++){
+      for(var i = 0; i < schools.length; i++) {
         dataWrapper[schools[i].url] = schools[i];
       }
       console.log(dataWrapper);
@@ -367,25 +367,25 @@ function loadData() {
   })
 }
 
-function openDB(){
-  if(open){
+function openDB() {
+  if(open) {
     return Dexie.Promise.resolve();
   } else {
     return db.open().then(() => { open = true;});
   }
 }
 
-function putAll(clear = false){
+function putAll(clear = false) {
   transactions = [];
-  for(school in dataWrapper){
+  for(school in dataWrapper) {
     transactions.push({url: school, data: (clear ? [] : dataWrapper[school].data), city: dataWrapper[school].city, visited: dataWrapper[school].visited})
   }
   return transactions;
 }
 
-async function saveData(clear = false){
-  return openDB().then(function(){
-    return db.transaction('rw', db.schools, function(){
+async function saveData(clear = false) {
+  return openDB().then(function() {
+    return db.transaction('rw', db.schools, function() {
       return db.schools.bulkPut(putAll(clear));
     })
   })
@@ -396,7 +396,7 @@ async function saveData(clear = false){
 //   var schools = await db.schools.toArray();
 //   console.log(schools, schools.length)
 //   dataWrapper = {};
-//   for(var i = 0; i < schools.length; i++){
+//   for(var i = 0; i < schools.length; i++) {
 //     dataWrapper[schools[i].url] = schools[i];
 //   }
 //   console.log(dataWrapper);
@@ -404,7 +404,7 @@ async function saveData(clear = false){
 //     schools = promisedSchools;
 //     console.log(schools, schools.length)
 //     dataWrapper = {};
-//     for(var i = 0; i < schools.length; i++){
+//     for(var i = 0; i < schools.length; i++) {
 //       dataWrapper[schools[i].url] = schools[i];
 //     }
 //     console.log(dataWrapper);
@@ -412,34 +412,34 @@ async function saveData(clear = false){
 //   return dataWrapper;
 // }
 //
-// async function openDB(){
+// async function openDB() {
 //   if(open) return open;
 //   await db.open();
 //   return open = true;
 // }
 //
-// function putAll(clear = false){
+// function putAll(clear = false) {
 //   transactions = [];
-//   for(school in dataWrapper){
+//   for(school in dataWrapper) {
 //     transactions.push({url: school, data: (clear ? [] : dataWrapper[school].data), city: dataWrapper[school].city, visited: dataWrapper[school].visited})
 //   }
 //   console.log(transactions);
 //   return transactions;
 // }
 //
-// async function saveData(clear = false){
+// async function saveData(clear = false) {
 //   return await openDB()
-//   return db.transaction('rw', db.schools, function(){
+//   return db.transaction('rw', db.schools, function() {
 //     return db.schools.bulkPut(putAll(clear));
 //   })
 // }
 
-function getCheckedStates(){
+function getCheckedStates() {
   var inputs, selected = [], wrapper = document.getElementById('DUS_STATES_CHECKBOXES');
 
   if(wrapper) {
     inputs = Array.apply(null, wrapper.querySelectorAll('input[name=DUS_STATE_CHECKBOX]'));
-    for(var i = 0; i < inputs.length; i++){
+    for(var i = 0; i < inputs.length; i++) {
       if(inputs[i].checked) selected.push(inputs[i].value);
     }
   }
@@ -447,16 +447,16 @@ function getCheckedStates(){
   return selected;
 }
 
-function downloadTable(e){
+function downloadTable(e) {
   stateElement = getStateElement();
-  if(table && (e.target.id === buttonId) || e.target.id === singleButtonId){
+  if(table && (e.target.id === buttonId) || e.target.id === singleButtonId) {
     var checkedStates = Array.apply(null, getCheckedStates())
     e.preventDefault();
     e.stopPropagation();
     globalSet({
       states: (e.target.id === singleButtonId) ? [] : checkedStates.filter((val) => ((!stateElement) || (val !== stateElement.value)))
-    }, function(){
-      if(stateElement && checkedStates.includes(stateElement.value)){
+    }, function() {
+      if(stateElement && checkedStates.includes(stateElement.value)) {
         startRun();
       } else {
         startRun(true)
@@ -465,7 +465,7 @@ function downloadTable(e){
   }
 }
 
-function checkError(){
+function checkError() {
   if(chrome.runtime.lastError) {
     console.log(chrome.runtime.lastError)
     return chrome.runtime.lastError = null;
@@ -473,14 +473,14 @@ function checkError(){
   return true;
 }
 
-function startRun(wrongState, gender){
-  saveData(true).then(function(){
+function startRun(wrongState, gender) {
+  saveData(true).then(function() {
     var eventEl = document.getElementById('ddEvent')
     return globalSet({runningMilesplit: (!!wrongState ? 'nextState' : 'true'), startingPoint: window.location.href, currentState: false, gender: !!gender ? gender : 'M', lastEvent: (eventEl ? eventEl.value : null)}, parseTable);
   })
 }
 
-function parseTable(){
+function parseTable() {
   if(!currentGrade || !table || !gradeOptions.includes(document.getElementById('ddGrade').value.toLowerCase())) return yearEventOrCities();
 
   var accuracy = document.getElementById('ddAccuracy');
@@ -490,7 +490,7 @@ function parseTable(){
     return false
   }
 
-  return globalGet({gender: 'M'}, async function(obj){
+  return globalGet({gender: 'M'}, async function(obj) {
 
     var row,
     tbody = table.getElementsByTagName('tbody')[0],
@@ -503,14 +503,14 @@ function parseTable(){
     state = (stateVal === 'usa' ? function(row){ return trimValue(row.querySelector('td.name .team .state')) } : function() { return stateVal }),
     gender = (level.includes('BOYS') || level.includes('MEN')) ? 'M' : 'F'
 
-    if(gender !== obj.gender){
+    if(gender !== obj.gender) {
       changeEvent(levelEl, (obj.gender === 'M') ? 'high-school-boys' : 'high-school-girls');
       return false
     }
 
     if(noRun.includes(event.toLowerCase())) return yearEventOrCities();
 
-    for(var r = 0; r < rows.length; r++){
+    for(var r = 0; r < rows.length; r++) {
       row = rows[r];
       let newData,
           name = trimValue(row.querySelector('td.name .athlete a')).split(' '),
@@ -545,7 +545,7 @@ function parseTable(){
 
     console.log(await saveData());
     var nextPage;
-    if(nextPage = section.querySelector('.pagination a.next')){
+    if(nextPage = section.querySelector('.pagination a.next')) {
       nextPage.click();
     } else {
       yearEventOrCities();
@@ -558,7 +558,7 @@ function setGrades(cb = null) {
 }
 
 function containsValue(el, val) {
-  for(var i = 0; i < el.length; i++){
+  for(var i = 0; i < el.length; i++) {
     if(el.options[i].value === val) return true;
   }
   return false;
@@ -584,12 +584,12 @@ function shiftGrade(grades) {
   })
 }
 
-function yearEventOrCities(){
+function yearEventOrCities() {
   globalGet({grades: [], events: []}, function(obj) {
-    if((obj.grades.length > 0) && (shiftGrade(obj.grades) !== 'noGrades')){
+    if((obj.grades.length > 0) && (shiftGrade(obj.grades) !== 'noGrades')) {
       console.log('switching grades')
-    } else if(obj.events.length > 0){
-      globalSet({runningMilesplit: 'nextEvent'}, function(){
+    } else if(obj.events.length > 0) {
+      globalSet({runningMilesplit: 'nextEvent'}, function() {
         gradeHolder = document.getElementById('ddGrade');
         changeEvent(gradeHolder, '');
       })
@@ -600,17 +600,17 @@ function yearEventOrCities(){
   })
 }
 
-async function getCities(){
+async function getCities() {
   var currentCity = localStorage.getItem('currentCity');
-  if(currentCity){
+  if(currentCity) {
     var foundCity = false,
         cityHeader = document.querySelector('header.profile .teamInfo');
 
     if(cityHeader) {
       var spans = cityHeader.querySelectorAll('span');
-      for(var s = 0; s < spans.length; s++){
+      for(var s = 0; s < spans.length; s++) {
         var span = spans[s]
-        if(span.innerHTML.toLowerCase().indexOf('usa') !== -1){
+        if(span.innerHTML.toLowerCase().indexOf('usa') !== -1) {
           var city = span.innerHTML.split(',')[0].trim()
           foundCity = true;
           dataWrapper[currentCity]['visited'] = true;
@@ -620,16 +620,16 @@ async function getCities(){
       }
     }
 
-    if(!foundCity){
+    if(!foundCity) {
       dataWrapper[currentCity]['visited'] = true;
       dataWrapper[currentCity]['city'] = 'unknown';
     }
 
     await saveData();
   }
-  for (var school in dataWrapper){
+  for (var school in dataWrapper) {
     if (dataWrapper.hasOwnProperty(school)) {
-      if(!dataWrapper[school]['visited']){
+      if(!dataWrapper[school]['visited']) {
         localStorage.setItem('currentCity', school);
         var link = document.createElement("a");
         link.setAttribute("href", school);
@@ -643,7 +643,7 @@ async function getCities(){
   createCsv();
 }
 
-function createCsv(){
+function createCsv() {
   const colStart = '"',
         colDelim = '","',
         rowDelim = '"\r\n',
@@ -654,26 +654,26 @@ function createCsv(){
       csv = colStart,
       successful = true;
 
-  const rowOrCol = function rowOrCol(colNum){
+  const rowOrCol = function rowOrCol(colNum) {
     return colNum === lastCol ? rowDelim : colDelim
   }
 
-  globalGet({fileName: new Date().getTime()}, function(obj){
+  globalGet({fileName: new Date().getTime()}, function(obj) {
     try {
-      for(let h = 0; h < headers.length; h++){
+      for(let h = 0; h < headers.length; h++) {
         csv += headers[h] + rowOrCol(h);
       }
 
-      for (let school in dataWrapper){
+      for (let school in dataWrapper) {
         if (dataWrapper.hasOwnProperty(school)) {
           city = dataWrapper[school]['city'];
           rows = dataWrapper[school]['data'];
 
-          for(let r = 0; r < rows.length; r++){
+          for(let r = 0; r < rows.length; r++) {
             row = rows[r];
             row['City'] = city;
             csv += colStart
-            for(var h = 0; h < headers.length; h++){
+            for(var h = 0; h < headers.length; h++) {
               var header = headers[h];
               csv += row[header] + rowOrCol(h);
             }
@@ -694,14 +694,14 @@ function createCsv(){
     }
 
     setTimeout(async () => {
-      if(successful){
+      if(successful) {
         await saveData(true);
 
         localStorage.removeItem('currentGrade');
 
-        globalSet({runningMilesplit: 'nextGender'}, function(){
+        globalSet({runningMilesplit: 'nextGender'}, function() {
           deleteLocalKeys();
-          globalGet('startingPoint',function(obj){
+          globalGet('startingPoint',function(obj) {
             if(checkError()) {
               window.location.href = obj.startingPoint;
             }
@@ -712,13 +712,13 @@ function createCsv(){
   })
 }
 
-function clearCurrent(e){
+function clearCurrent(e) {
   if(e.target.id === clearButtonId) {
     clearTimeout(runTimeout);
-    if(window.confirm('Clear Data?')){
+    if(window.confirm('Clear Data?')) {
       deleteAllData();
     } else {
-      globalGet(null, function(stuff){
+      globalGet(null, function(stuff) {
         console.log(stuff);
         console.log('currentCity: ', localStorage.getItem('currentCity'));
         console.log('currentGrade: ', localStorage.getItem('currentGrade'));
@@ -728,7 +728,7 @@ function clearCurrent(e){
   }
 }
 
-function addClearButton(){
+function addClearButton() {
   var clearButton = document.createElement('a');
 
   clearButton.id = clearButtonId;
@@ -747,7 +747,7 @@ function run() {
   addClearButton();
 
   runTimeout = setTimeout(function() {
-    loadData().then(function(){
+    loadData().then(function() {
       start();
     });
   }, 5000)
