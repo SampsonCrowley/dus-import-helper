@@ -75,7 +75,7 @@ singleButtonId = 'DUS_IMPORT_BUTTON_SINGLE',
 clearButtonId = 'DUS_CLEAR_ALL_RUNNING',
 stateListWrapperId = 'DUS_STATES_CHECKBOXES',
 dataWrapper,
-noRun = ['usa', 'os', 'pr', 'leaders', '4x100m', '4x200m', '4x400m', '4x800m', 'flo50'],
+noRun = ['usa', 'os', 'pr', 'leaders', '4x100m', '4x200m', '4x400m', '4x800m', 'flo50', 'smr'],
 currentGrade = localStorage.getItem('currentGrade'),
 gradeOptions = ['junior', 'sophomore', 'freshman'/*, '8th-grade'*/],
 open = false,
@@ -722,7 +722,16 @@ function clearCurrent(e) {
         console.log(stuff);
         console.log('currentCity: ', localStorage.getItem('currentCity'));
         console.log('currentGrade: ', localStorage.getItem('currentGrade'));
-        alert('all values logged to console, refresh page to continue')
+        alert('all values logged to console, refresh page to continue');
+
+        document.removeEventListener('click', clearCurrent);
+
+        e.target.innerHTML = 'NEXT EVENT OR AGE'
+        document.addEventListener('click', function(ev){
+          if(ev.target.id === clearButtonId) {
+            loadData().then(yearEventOrCities)
+          }
+        });
       })
     }
   }
