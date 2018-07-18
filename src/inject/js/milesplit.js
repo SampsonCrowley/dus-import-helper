@@ -614,9 +614,8 @@ async function getCities() {
             var massLink = school.split('/');
             localStorage.setItem('massTeamPage', 'redirecting')
             var link = document.createElement("a");
-            link.setAttribute("href", massLink[0] + '/' + massLink[1]);
+            link.setAttribute("href", massLink.filter((l) => !(/^[0-9]+$/.test(l))).join('/'));
             document.body.appendChild(link);
-            return console.log(link.href, school, massLink);
             return link.click();
           }
         } catch(e) {
@@ -629,8 +628,7 @@ async function getCities() {
         tableRows = Array.apply(null, document.querySelectorAll('#content table.teams tbody tr'))
 
     for(let i = 0; i < tableRows.length; i++) {
-      let row = tableRows[i],
-          cells = Array.apply(null, querySelectorAll('td')),
+      let cells = Array.apply(null, tableRows[i].querySelectorAll('td')),
           key, value;
       for(let c = 0; c < cells.length; c++){
         let cell = cells[c],
@@ -695,7 +693,6 @@ async function getCities() {
   }
 
   localStorage.removeItem('currentCity');
-  localStorage.removeItem('massTeamPage');
   localStorage.removeItem('massTeamPage');
   createCsv();
 }
