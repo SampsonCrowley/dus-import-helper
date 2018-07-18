@@ -1,7 +1,7 @@
 {
   "name": "Down Under Sports Import Helper",
   "description": "Automate Name finding on select sites",
-  "version": "9.0.2",
+  "version": "9.0.5",
   "permissions" : [
     "storage",
     "tabs",

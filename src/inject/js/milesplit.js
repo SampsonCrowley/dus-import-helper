@@ -624,6 +624,12 @@ async function getCities() {
       }
     }
 
+    // for (var school in dataWrapper) {
+    //   if (dataWrapper.hasOwnProperty(school) && /teams/.test(school)) {
+    //     dataWrapper[school]['visited'] = false;
+    //   }
+    // }
+
     var foundSomething = false,
         tableRows = Array.apply(null, document.querySelectorAll('#content table.teams tbody tr'))
 
@@ -638,6 +644,7 @@ async function getCities() {
         } else {
           if(cell.innerHTML.toLowerCase().indexOf('usa') !== -1){
             value = cell.innerText.split(',')[0].trim();
+            value = /^[A-Z]{2,3}$/.test(value) ? 'unknown' : value
           }
         }
       }
@@ -645,7 +652,7 @@ async function getCities() {
       if(!!key && !!value && !!dataWrapper[key]) {
         foundSomething = true;
         dataWrapper[key]['visited'] = true;
-        dataWrapper[key]['city'] = city;
+        dataWrapper[key]['city'] = value;
       }
     }
 
@@ -666,7 +673,7 @@ async function getCities() {
           var city = span.innerHTML.split(',')[0].trim()
           foundCity = true;
           dataWrapper[currentCity]['visited'] = true;
-          dataWrapper[currentCity]['city'] = city;
+          dataWrapper[currentCity]['city'] = /^[A-Z]{2,3}$/.test(city) ? 'unknown' : city;
           break;
         }
       }
@@ -762,7 +769,7 @@ function createCsv() {
           })
         });
       }
-    }, 5 * 60 * 1000)
+    }, 60 * 1000)
   })
 }
 
