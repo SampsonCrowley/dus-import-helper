@@ -595,13 +595,60 @@ function yearEventOrCities() {
       })
     } else {
       localStorage.removeItem('currentCity');
+      localStorage.removeItem('massTeamPage');
       globalSet({runningMilesplit: 'runningCities'}, getCities)
     }
   })
 }
 
 async function getCities() {
-  var currentCity = localStorage.getItem('currentCity');
+  var currentCity = localStorage.getItem('currentCity'),
+      massChecked = localStorage.getItem('massTeamPage');
+  if (massChecked !== 'done') {
+    if(!massChecked) {
+      for (var school in dataWrapper) {
+        if (dataWrapper.hasOwnProperty(school)) {
+          var massLink = school.split('/');
+          localStorage.setItem('massTeamPage', 'redirecting')
+          var link = document.createElement("a");
+          link.setAttribute("href", massLink[0] + '/' + massLink[1]);
+          document.body.appendChild(link);
+          return link.click();
+        }
+      }
+    }
+
+    var foundSomething = false,
+        tableRows = Array.apply(null, document.querySelectorAll('#content table.teams tbody tr'))
+
+    for(let i = 0; i < tableRows.length; i++) {
+      let row = tableRows[i],
+          cells = Array.apply(null, querySelectorAll('td')),
+          key, value;
+      for(let c = 0; c < cells.length; c++){
+        let cell = cells[c],
+            schoolLink = cell.querySelector('a');
+        if(schoolLink){
+          key = schoolLink.href.replace(/(.*\/[0-9]+)\-.*/, "$1");
+        } else {
+          if(cell.innerHTML.toLowerCase().indexOf('usa') !== -1){
+            value = cell.innerText.split(',')[0].trim();
+          }
+        }
+      }
+
+      if(!!key && !!value && !!dataWrapper[key]) {
+        foundSomething = true;
+        dataWrapper[key]['visited'] = true;
+        dataWrapper[key]['city'] = city;
+      }
+    }
+
+    await saveData();
+
+    localStorage.setItem('massTeamPage', 'done')
+  }
+
   if(currentCity) {
     var foundCity = false,
         cityHeader = document.querySelector('header.profile .teamInfo');
@@ -627,6 +674,7 @@ async function getCities() {
 
     await saveData();
   }
+
   for (var school in dataWrapper) {
     if (dataWrapper.hasOwnProperty(school)) {
       if(!dataWrapper[school]['visited']) {
@@ -640,6 +688,8 @@ async function getCities() {
   }
 
   localStorage.removeItem('currentCity');
+  localStorage.removeItem('massTeamPage');
+  localStorage.removeItem('massTeamPage');
   createCsv();
 }
 
