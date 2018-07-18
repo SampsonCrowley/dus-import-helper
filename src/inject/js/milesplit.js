@@ -60,6 +60,8 @@ var domReady = (function() {
     }
   }
 
+  console.log(ready)
+
   return function(fn) {
     // if the DOM is already ready,
     // execute the function
@@ -607,13 +609,18 @@ async function getCities() {
   if (massChecked !== 'done') {
     if(!massChecked) {
       for (var school in dataWrapper) {
-        if (dataWrapper.hasOwnProperty(school)) {
-          var massLink = school.split('/');
-          localStorage.setItem('massTeamPage', 'redirecting')
-          var link = document.createElement("a");
-          link.setAttribute("href", massLink[0] + '/' + massLink[1]);
-          document.body.appendChild(link);
-          return link.click();
+        try {
+          if (dataWrapper.hasOwnProperty(school) && /teams/.test(school)) {
+            var massLink = school.split('/');
+            localStorage.setItem('massTeamPage', 'redirecting')
+            var link = document.createElement("a");
+            link.setAttribute("href", massLink[0] + '/' + massLink[1]);
+            document.body.appendChild(link);
+            return console.log(link.href, school, massLink);
+            return link.click();
+          }
+        } catch(e) {
+          console.log(e)
         }
       }
     }
@@ -775,13 +782,16 @@ function clearCurrent(e) {
         alert('all values logged to console, refresh page to continue');
 
         document.removeEventListener('click', clearCurrent);
+        loadData().then(function(){
+          console.log(dataWrapper);
 
-        e.target.innerHTML = 'NEXT EVENT OR AGE'
-        document.addEventListener('click', function(ev){
-          if(ev.target.id === clearButtonId) {
-            loadData().then(yearEventOrCities)
-          }
-        });
+          e.target.innerHTML = 'NEXT EVENT OR AGE'
+          document.addEventListener('click', function(ev){
+            if(ev.target.id === clearButtonId) {
+              yearEventOrCities()
+            }
+          });
+        })
       })
     }
   }
