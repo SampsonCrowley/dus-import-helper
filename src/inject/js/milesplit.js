@@ -624,6 +624,10 @@ function yearEventOrCities() {
   })
 }
 
+function isCurrentDomain(url) {
+  return !!(new RegExp(window.location.host.replace(/\./g, '\\.')).test(url))
+}
+
 async function getCities() {
   var currentCity = localStorage.getItem('currentCity'),
       massChecked = localStorage.getItem('massTeamPage');
@@ -710,7 +714,7 @@ async function getCities() {
 
   for (var school in dataWrapper) {
     if (dataWrapper.hasOwnProperty(school)) {
-      if(!dataWrapper[school]['visited']) {
+      if(!dataWrapper[school]['visited'] && isCurrentDomain(school)) {
         localStorage.setItem('currentCity', school);
         var link = document.createElement("a");
         link.setAttribute("href", school);
