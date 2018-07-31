@@ -96,7 +96,12 @@ function deleteAllData() {
   deleteLocalKeys();
   globalGet(null, function(stuff) {
     console.log(stuff);
-    chrome.storage.local.clear()
+    chrome.storage.local.clear(function() {
+      var error = chrome.runtime.lastError;
+      if (error) {
+        console.error('Error Clearing Data', error);
+      }
+    });
   })
 }
 
@@ -146,7 +151,7 @@ function start() {
               })
             }
 
-            return globalSet({grades: Array.apply(null, gradeOptions), runningMilesplit: 'true', currentEvent: null, lastEvent: eventHolder.value}, yearEventOrCities);
+            return globalSet({grades: gradeOptions.slice(0), runningMilesplit: 'true', currentEvent: null, lastEvent: eventHolder.value}, yearEventOrCities);
 
           } else if(obj.runningMilesplit === 'nextGender') {
             if(obj.gender === 'F') {
@@ -315,28 +320,42 @@ function addElementsToDOM(state) {
   document.addEventListener('click', downloadTable);
 }
 
+function getOptionsFromEventEl(fullList = false){
+  var eventEl = document.getElementById('ddEvent')
+
+  return Array.apply(null, eventEl.options)
+    .filter((option) => (!!option.value && !noRun.includes(option.value.toLowerCase()) && (fullList || option.value !== eventEl.value)))
+    .map((option) => option.value)
+}
+
 function freshStart(state, cb = null) {
   cb = cb || (res => res);
 
-  var eventEl = document.getElementById('ddEvent'),
-      gradeEl = document.getElementById('ddGrade'),
-      options = Array.apply(null, eventEl.options)
-        .filter((option) => (!!option.value && !noRun.includes(option.value.toLowerCase()) && option.value !== eventEl.value))
-        .map((option) => option.value),
-      seasonVal = document.getElementById('ddSeason').value,
-      levelVal = document.getElementById('ddLevel').value;
+  globalGet({originalEvents: []}, function(obj) {
+    var eventEl = document.getElementById('ddEvent'),
+        gradeEl = document.getElementById('ddGrade'),
+        ogEvents = (obj.originalEvents && obj.originalEvents.length) ? obj.originalEvents.slice(0) : getOptionsFromEventEl(true),
+        options = ogEvents.filter((v) => (eventEl.value !== v)),
+        seasonVal = document.getElementById('ddSeason').value,
+        levelVal = document.getElementById('ddLevel').value;
 
-  deleteLocalKeys();
-  return globalSet({events: options, grades: Array.apply(null, gradeOptions), fileName: state + '_' + levelVal + '_' + seasonVal}, function() {
-    if(!!gradeEl.value) {
-      changeEvent(gradeEl, '');
-      return cb(false)
-    } else if(noRun.includes(eventEl.value.toLowerCase())) {
-      changeEvent(eventEl, options.shift());
-      return cb(false)
-    }
+    console.log(options, obj.originalEvents)
 
-    return cb(true);
+    deleteLocalKeys();
+    return globalSet({events: options, grades: gradeOptions.slice(0), fileName: state + '_' + levelVal + '_' + seasonVal}, function() {
+      if(!!gradeEl.value) {
+        changeEvent(gradeEl, '');
+        return cb(false)
+      } else if(!ogEvents.includes(eventEl.value)) {
+        console.log('event not found', ogEvents, eventEl.value)
+        setTimeout(() => {
+          changeEvent(eventEl, options.shift());
+          return cb(false)
+        }, 60 * 1000)
+      }
+
+      return cb(true);
+    })
   })
 }
 
@@ -456,7 +475,9 @@ function downloadTable(e) {
     e.preventDefault();
     e.stopPropagation();
     globalSet({
-      states: (e.target.id === singleButtonId) ? [] : checkedStates.filter((val) => ((!stateElement) || (val !== stateElement.value)))
+      states: (e.target.id === singleButtonId) ? [] : checkedStates.filter((val) => ((!stateElement) || (val !== stateElement.value))),
+      events: getOptionsFromEventEl(),
+      originalEvents: getOptionsFromEventEl(true)
     }, function() {
       if(stateElement && checkedStates.includes(stateElement.value)) {
         startRun();
@@ -556,7 +577,7 @@ function parseTable() {
 }
 
 function setGrades(cb = null) {
-  globalSet({grades: Array.apply(null, gradeOptions)}, cb || function(){})
+  globalSet({grades: gradeOptions.slice(0)}, cb || function(){})
 }
 
 function containsValue(el, val) {
