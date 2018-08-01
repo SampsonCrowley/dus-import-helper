@@ -203,7 +203,7 @@ function start() {
       } else {
         console.log(obj)
         globalGet()
-        if(obj.runningMilesplit === 'true') {
+        if((obj.runningMilesplit === 'true') || (obj.runningMilesplit === 'nextEvent')) {
           const allHeaders = Array.apply(null, document.querySelectorAll('h1'))
           for(let h = 0; h < allHeaders.length; h++) {
             if(/not found/.test(allHeaders[h].innerText.toLowerCase())) {
@@ -334,8 +334,9 @@ function freshStart(state, cb = null) {
   globalGet({originalEvents: []}, function(obj) {
     var eventEl = document.getElementById('ddEvent'),
         gradeEl = document.getElementById('ddGrade'),
-        ogEvents = (obj.originalEvents && obj.originalEvents.length) ? obj.originalEvents.slice(0) : getOptionsFromEventEl(true),
-        options = ogEvents.filter((v) => (eventEl.value !== v)),
+        elEvents = getOptionsFromEventEl(true),
+        ogEvents = (obj.originalEvents && obj.originalEvents.length) ? obj.originalEvents.slice(0) : elEvents,
+        options = ogEvents.filter((v) => (eventEl.value !== v && elEvents.includes(v))),
         seasonVal = document.getElementById('ddSeason').value,
         levelVal = document.getElementById('ddLevel').value;
 
@@ -474,16 +475,29 @@ function downloadTable(e) {
     var checkedStates = Array.apply(null, getCheckedStates())
     e.preventDefault();
     e.stopPropagation();
-    globalSet({
-      states: (e.target.id === singleButtonId) ? [] : checkedStates.filter((val) => ((!stateElement) || (val !== stateElement.value))),
-      events: getOptionsFromEventEl(),
-      originalEvents: getOptionsFromEventEl(true)
-    }, function() {
-      if(stateElement && checkedStates.includes(stateElement.value)) {
-        startRun();
-      } else {
-        startRun(true)
+    globalGet({events: []}, function(obj) {
+      const eventList = getOptionsFromEventEl(),
+            currentEvents = obj.events || [],
+            maxLength = (currentEvents.length < eventList.length) ? eventList.length : currentEvents.length;
+
+      let custom = (currentEvents.length !== eventList.length)
+      if(!custom) {
+        for(let i = 0; i < maxLength; i++) {
+          custom = !eventList.includes(currentEvents[i])
+          if(custom) break;
+        }
       }
+      globalSet({
+        states: (e.target.id === singleButtonId) ? [] : checkedStates.filter((val) => ((!stateElement) || (val !== stateElement.value))),
+        events: getOptionsFromEventEl(),
+        originalEvents: custom ? getOptionsFromEventEl(true) : []
+      }, function() {
+        if(stateElement && checkedStates.includes(stateElement.value)) {
+          startRun();
+        } else {
+          startRun(true)
+        }
+      })
     })
   }
 }
