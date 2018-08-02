@@ -126,7 +126,10 @@ function changeEvent(el, value) {
 
 function start() {
   globalGet({runningMilesplit: false, gender: 'M', states: [], currentState: false, events: [], grades: [], currentEvent: null, lastEvent: null}, function(obj) {
-    if(obj.runningMilesplit === 'runningCities') {
+    runningMilesplit: ''
+    if(obj.runningMilesplit === 'createCsv') {
+      createCsv()
+    } else if(obj.runningMilesplit === 'runningCities') {
       return getCities();
     } else {
       section = document.getElementById('eventRankings') || document.getElementById('rankingsLeaders');
@@ -211,7 +214,7 @@ function start() {
                 globalSet({runningMilesplit: 'nextEvent', currentEvent: obj.lastEvent}, function() {
                   var url = window.location.href.split('?');
 
-                  window.location.href = url[0].replace(/(.*\/)(.*)/, '$1') + '?' + (url[1] || '')
+                  goToUrl(url[0].replace(/(.*\/)(.*)/, '$1') + '?' + (url[1] || ''))
                 })
               }, 5000)
             }
@@ -642,105 +645,120 @@ function isCurrentDomain(url) {
   return !!(new RegExp(window.location.host.replace(/\./g, '\\.')).test(url))
 }
 
-async function getCities() {
-  var currentCity = localStorage.getItem('currentCity'),
-      massChecked = localStorage.getItem('massTeamPage');
-  if (massChecked !== 'done') {
-    if(!massChecked) {
-      for (var school in dataWrapper) {
-        try {
-          if (dataWrapper.hasOwnProperty(school) && /teams/.test(school)) {
-            var massLink = school.split('/');
-            localStorage.setItem('massTeamPage', 'redirecting')
-            var link = document.createElement("a");
-            link.setAttribute("href", massLink.filter((l) => !(/^[0-9]+$/.test(l))).join('/'));
-            document.body.appendChild(link);
-            return link.click();
-          }
-        } catch(e) {
-          console.log(e)
-        }
-      }
-    }
+function goToUrl(url) {
+  var link = document.createElement("a");
+  link.setAttribute("href", url);
+  document.body.appendChild(link);
+  return link.click();
+}
 
-    // for (var school in dataWrapper) {
-    //   if (dataWrapper.hasOwnProperty(school) && /teams/.test(school)) {
-    //     dataWrapper[school]['visited'] = false;
-    //   }
-    // }
+function getCities() {
+  globalGet('startingPoint', async function(obj) {
+    var currentCity = localStorage.getItem('currentCity'),
+        massChecked = localStorage.getItem('massTeamPage'),
+        startingPoint = obj.startingPoint || '';
 
-    var foundSomething = false,
-        tableRows = Array.apply(null, document.querySelectorAll('#content table.teams tbody tr'))
-
-    for(let i = 0; i < tableRows.length; i++) {
-      let cells = Array.apply(null, tableRows[i].querySelectorAll('td')),
-          key, value;
-      for(let c = 0; c < cells.length; c++){
-        let cell = cells[c],
-            schoolLink = cell.querySelector('a');
-        if(schoolLink){
-          key = schoolLink.href.replace(/(.*\/[0-9]+)\-.*/, "$1");
-        } else {
-          if(cell.innerHTML.toLowerCase().indexOf('usa') !== -1){
-            value = cell.innerText.split(',')[0].trim();
-            value = /^[A-Z]{2,3}$/.test(value) ? 'unknown' : value
+    if (massChecked !== 'done') {
+      if(!massChecked) {
+        for (var school in dataWrapper) {
+          try {
+            if (dataWrapper.hasOwnProperty(school) && /teams/.test(school)) {
+              var massLink = school.split('/');
+              localStorage.setItem('massTeamPage', 'redirecting')
+              goToUrl(massLink.filter((l) => !(/^[0-9]+$/.test(l))).join('/'))
+            }
+          } catch(e) {
+            console.log(e)
           }
         }
       }
 
-      if(!!key && !!value && !!dataWrapper[key]) {
-        foundSomething = true;
-        dataWrapper[key]['visited'] = true;
-        dataWrapper[key]['city'] = value;
+      // for (var school in dataWrapper) {
+      //   if (dataWrapper.hasOwnProperty(school) && /teams/.test(school)) {
+      //     dataWrapper[school]['visited'] = false;
+      //   }
+      // }
+
+      var foundSomething = false,
+          tableRows = Array.apply(null, document.querySelectorAll('#content table.teams tbody tr'))
+
+      for(let i = 0; i < tableRows.length; i++) {
+        let cells = Array.apply(null, tableRows[i].querySelectorAll('td')),
+            key, value;
+        for(let c = 0; c < cells.length; c++){
+          let cell = cells[c],
+              schoolLink = cell.querySelector('a');
+          if(schoolLink){
+            key = schoolLink.href.replace(/(.*\/[0-9]+)\-.*/, "$1");
+          } else {
+            if(cell.innerHTML.toLowerCase().indexOf('usa') !== -1){
+              value = cell.innerText.split(',')[0].trim();
+              value = /^[A-Z]{2,3}$/.test(value) ? 'unknown' : value
+            }
+          }
+        }
+
+        if(!!key && !!value && !!dataWrapper[key]) {
+          foundSomething = true;
+          dataWrapper[key]['visited'] = true;
+          dataWrapper[key]['city'] = value;
+        }
       }
+
+      await saveData();
+
+      localStorage.setItem('massTeamPage', 'done')
     }
 
-    await saveData();
+    if(currentCity) {
+      var foundCity = false,
+          cityHeader = document.querySelector('header.profile .teamInfo');
 
-    localStorage.setItem('massTeamPage', 'done')
-  }
+      if(cityHeader) {
+        var spans = cityHeader.querySelectorAll('span');
+        for(var s = 0; s < spans.length; s++) {
+          var span = spans[s]
+          if(span.innerHTML.toLowerCase().indexOf('usa') !== -1) {
+            var city = span.innerHTML.split(',')[0].trim()
+            foundCity = true;
+            dataWrapper[currentCity]['visited'] = true;
+            dataWrapper[currentCity]['city'] = /^[A-Z]{2,3}$/.test(city) ? 'unknown' : city;
+            break;
+          }
+        }
+      }
 
-  if(currentCity) {
-    var foundCity = false,
-        cityHeader = document.querySelector('header.profile .teamInfo');
+      if(!foundCity) {
+        dataWrapper[currentCity]['visited'] = true;
+        dataWrapper[currentCity]['city'] = 'unknown';
+      }
 
-    if(cityHeader) {
-      var spans = cityHeader.querySelectorAll('span');
-      for(var s = 0; s < spans.length; s++) {
-        var span = spans[s]
-        if(span.innerHTML.toLowerCase().indexOf('usa') !== -1) {
-          var city = span.innerHTML.split(',')[0].trim()
-          foundCity = true;
-          dataWrapper[currentCity]['visited'] = true;
-          dataWrapper[currentCity]['city'] = /^[A-Z]{2,3}$/.test(city) ? 'unknown' : city;
-          break;
+      await saveData();
+    }
+
+    for (var school in dataWrapper) {
+      if (dataWrapper.hasOwnProperty(school)) {
+        if(!dataWrapper[school]['visited']) {
+          if(isCurrentDomain(school) && isCurrentDomain(startingPoint)) {
+            localStorage.setItem('currentCity', school);
+            return goToUrl(school);
+          } else {
+            dataWrapper[currentCity]['visited'] = true;
+            dataWrapper[currentCity]['city'] = 'unknown';
+
+            await saveData();
+          }
         }
       }
     }
 
-    if(!foundCity) {
-      dataWrapper[currentCity]['visited'] = true;
-      dataWrapper[currentCity]['city'] = 'unknown';
-    }
+    localStorage.removeItem('currentCity');
+    localStorage.removeItem('massTeamPage');
 
-    await saveData();
-  }
-
-  for (var school in dataWrapper) {
-    if (dataWrapper.hasOwnProperty(school)) {
-      if(!dataWrapper[school]['visited'] && isCurrentDomain(school)) {
-        localStorage.setItem('currentCity', school);
-        var link = document.createElement("a");
-        link.setAttribute("href", school);
-        document.body.appendChild(link);
-        return link.click();
-      }
-    }
-  }
-
-  localStorage.removeItem('currentCity');
-  localStorage.removeItem('massTeamPage');
-  createCsv();
+    globalSet({runningMilesplit: 'createCsv'}, function() {
+      goToUrl(startingPoint)
+    })
+  })
 }
 
 function createCsv() {
@@ -802,9 +820,7 @@ function createCsv() {
         globalSet({runningMilesplit: 'nextGender'}, function() {
           deleteLocalKeys();
           globalGet('startingPoint',function(obj) {
-            if(checkError()) {
-              window.location.href = obj.startingPoint;
-            }
+            if(checkError()) goToUrl(obj.startingPoint)
           })
         });
       }
